@@ -1,12 +1,17 @@
 """FastAPI application entry point."""
-from fastapi import FastAPI, Depends, HTTPException, status
-from fastapi.middleware.cors import CORSMiddleware
+
 from datetime import datetime
+
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+
 from src.core.settings import get_settings
+from src.core.logger import setup_logger
 from src.database.session import init_db
 from src.api.routes import classify
+from src.api.routes.rag import router as rag_router
 from src.schemas.common import SuccessResponse
-from src.core.logger import logger, setup_logger
+
 
 # Initialize settings
 settings = get_settings()
@@ -22,24 +27,27 @@ app_logger = setup_logger(
 # Create FastAPI app
 app = FastAPI(
     title="LLM-based Product Labeling API",
-    description="Production-grade FastAPI service for intelligent e-commerce product categorization and recommendation scoring using hybrid business rules + LLM approach",
+    description=(
+        "FastAPI service for product categorization, recommendation scoring, "
+        "business-rule classification, optional LLM enrichment, and local RAG search."
+    ),
     version="1.0.0",
     docs_url="/docs",
     redoc_url="/redoc",
     openapi_url="/openapi.json",
 )
 
+
 # Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Configure based on your needs
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 
-# Initialize database on startup
 @app.on_event("startup")
 async def startup_event():
     """Initialize database and log startup."""
@@ -61,15 +69,9 @@ async def shutdown_event():
     app_logger.info("Application shutting down")
 
 
-# Health check endpoint
 @app.get("/health", tags=["Health"], summary="Health check endpoint")
 async def health_check() -> dict:
-    """
-    Health check endpoint for monitoring.
-
-    Returns:
-        Dictionary with health status
-    """
+    """Return application health status."""
     return {
         "status": "healthy",
         "environment": settings.environment,
@@ -79,17 +81,12 @@ async def health_check() -> dict:
 
 # Include routers
 app.include_router(classify.router)
+app.include_router(rag_router, prefix="/api/v1/rag", tags=["RAG"])
 
 
-# Root endpoint
 @app.get("/", tags=["Root"], summary="API root")
 async def root() -> SuccessResponse:
-    """
-    API root endpoint with basic information.
-
-    Returns:
-        SuccessResponse with API information
-    """
+    """Return API information."""
     return SuccessResponse(
         status="success",
         data={
@@ -100,6 +97,7 @@ async def root() -> SuccessResponse:
                 "health": "/health",
                 "classify_category": "/api/v1/classify/category",
                 "classify_recommendation": "/api/v1/classify/recommendation",
+                "rag_search": "/api/v1/rag/search",
             },
         },
         timestamp=datetime.utcnow(),
