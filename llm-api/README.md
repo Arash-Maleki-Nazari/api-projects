@@ -1,330 +1,407 @@
 # LLM-based Product Labeling API
 
-Production-grade FastAPI service for intelligent e-commerce product categorization and recommendation scoring using a hybrid approach of deterministic business rules and GPT-4 LLM.
+FastAPI service for e-commerce product categorization and recommendation scoring using deterministic business rules with optional LLM enrichment.
 
 ## Features
 
-- **Two Specialized Services**
-  - **CategoryClassifier**: Categorizes products (budget/mid-range/premium) with tags (high-stock, low-stock, detailed-description)
-  - **RecommendationScorer**: Scores products (0-100) for recommendation viability with marketing insights
-
-- **Hybrid Approach**: Fast deterministic rules + LLM enrichment for nuanced insights
-- **Production-Ready**: Structured logging, API authentication, error handling, Docker support
-- **Dependency Injection**: Clean architecture with inversion of control
-- **FastAPI**: Modern async Python web framework with auto-generated OpenAPI docs
-- **SQLAlchemy ORM**: Type-safe database access with PostgreSQL
-- **Configurable**: Pydantic Settings for environment-based configuration
+- FastAPI REST API
+- API key authentication with `X-API-Key`
+- PostgreSQL database integration
+- SQLAlchemy ORM models
+- Rule-based product classification
+- Rule-based recommendation scoring
+- Optional LLM enrichment using an OpenAI-compatible API
+- Structured logging
+- Docker support
+- Unit and integration tests
+- Swagger/OpenAPI documentation
 
 ## Project Structure
 
-```
+```text
 llm-api/
 ├── src/
-│   ├── main.py                 # FastAPI app entry point
-│   ├── core/                   # Core utilities
-│   │   ├── settings.py         # Pydantic settings with env support
-│   │   ├── logger.py           # Structured JSON logging
-│   │   ├── container.py        # Dependency injection
-│   │   ├── llm_client.py       # OpenAI wrapper with retry logic
-│   │   └── business_rules_engine.py  # Rule evaluation engine
-│   ├── database/               # Database layer
-│   │   ├── models.py           # SQLAlchemy ORM models
-│   │   ├── session.py          # DB session management
-│   │   └── repository.py       # CRUD operations
-│   ├── services/               # Business logic
-│   │   ├── category_classifier.py    # Category classification service
-│   │   └── recommendation_scorer.py  # Recommendation scoring service
-│   ├── schemas/                # Pydantic request/response models
-│   │   ├── product.py          # Product schemas
-│   │   └── common.py           # Common response schemas
-│   └── api/                    # API layer
-│       ├── routes/
-│       │   └── classify.py     # Classification endpoints
-│       └── middleware/
-│           └── auth.py         # API key authentication
-├── tests/                      # Test suite (unit & integration)
-├── docker/                     # Docker configuration
-│   ├── Dockerfile              # Multi-stage production build
-│   └── docker-compose.yml      # Local dev environment
-├── requirements.txt            # Python dependencies
-├── .env.example               # Environment variables template
-├── .gitignore                 # Git ignore rules
-└── README.md                  # This file
+│   ├── main.py
+│   ├── api/
+│   │   ├── middleware/
+│   │   │   └── auth.py
+│   │   └── routes/
+│   │       └── classify.py
+│   ├── core/
+│   │   ├── business_rules_engine.py
+│   │   ├── container.py
+│   │   ├── llm_client.py
+│   │   ├── logger.py
+│   │   └── settings.py
+│   ├── database/
+│   │   ├── models.py
+│   │   ├── repository.py
+│   │   └── session.py
+│   ├── schemas/
+│   │   ├── common.py
+│   │   └── product.py
+│   └── services/
+│       ├── category_classifier.py
+│       └── recommendation_scorer.py
+├── tests/
+├── docker/
+├── requirements.txt
+├── .env.example
+├── QUICKSTART.md
+├── PROJECT_SUMMARY.md
+└── README.md
 ```
+
+## Tech Stack
+
+- Python 3.11
+- FastAPI
+- Uvicorn
+- Pydantic
+- SQLAlchemy
+- PostgreSQL
+- Docker
+- OpenAI Python SDK
+- Pytest
 
 ## Quick Start
 
-### Prerequisites
+### 1. Clone the repository
 
-- Python 3.11+
-- PostgreSQL 12+ (or use Docker)
-- OpenAI API key
-- Docker & Docker Compose (optional, for containerized setup)
+```bash
+git clone https://github.com/Arash-Maleki-Nazari/llm-api.git
+cd llm-api/llm-api
+```
 
-### Local Development Setup
+### 2. Create and activate a virtual environment
 
-1. **Clone and setup environment**
-   ```bash
-   cd d:\Mahsa\llm-api
-   python -m venv venv
-   .\venv\Scripts\activate  # On Windows
-   # source venv/bin/activate  # On macOS/Linux
-   ```
+Windows:
 
-2. **Install dependencies**
-   ```bash
-   pip install -r requirements.txt
-   ```
+```powershell
+py -3.11 -m venv venv
+.\venv\Scripts\Activate.ps1
+```
 
-3. **Configure environment**
-   ```bash
-   cp .env.example .env
-   # Edit .env and add your OpenAI API key and database URL
-   ```
+macOS/Linux:
 
-4. **Run with Uvicorn (local)**
-   ```bash
-   uvicorn src.main:app --reload --host 0.0.0.0 --port 8000
-   ```
+```bash
+python3.11 -m venv venv
+source venv/bin/activate
+```
 
-   Visit: http://localhost:8000/docs for interactive API documentation
+### 3. Install dependencies
 
-### Docker Setup
+```bash
+pip install -r requirements.txt
+```
 
-1. **Configure environment**
-   ```bash
-   cp .env.example .env
-   # Edit .env with your OpenAI API key
-   ```
+### 4. Configure environment variables
 
-2. **Build and run with docker-compose**
-   ```bash
-   cd docker
-   docker-compose up -d
-   ```
+Create a local `.env` file:
 
-   API will be available at: http://localhost:8000/docs
+```bash
+cp .env.example .env
+```
 
-3. **Stop services**
-   ```bash
-   docker-compose down
-   ```
+Example `.env`:
+
+```env
+ENVIRONMENT=development
+DEBUG=true
+LOG_LEVEL=INFO
+
+DATABASE_URL=postgresql://labeling_user:labeling_password@127.0.0.1:5433/labeling_db
+
+OPENAI_API_KEY=your-openai-api-key-here
+OPENAI_MODEL=gpt-4o-mini
+OPENAI_TEMPERATURE=0.2
+OPENAI_MAX_TOKENS=500
+
+API_KEY_SECRET=my-local-api-key
+RATE_LIMIT_PER_MINUTE=100
+
+LOG_FORMAT=json
+```
+
+Do not commit `.env` to GitHub.
+
+### 5. Start PostgreSQL with Docker
+
+```powershell
+docker run --name llm-api-postgres `
+  -e POSTGRES_USER=labeling_user `
+  -e POSTGRES_PASSWORD=labeling_password `
+  -e POSTGRES_DB=labeling_db `
+  -p 5433:5432 `
+  -d postgres:16-alpine
+```
+
+### 6. Run the API
+
+```bash
+python -m uvicorn src.main:app --reload
+```
+
+Open Swagger docs:
+
+```text
+http://127.0.0.1:8000/docs
+```
+
+## Authentication
+
+Protected endpoints require this header:
+
+```text
+X-API-Key: my-local-api-key
+```
+
+The value must match `API_KEY_SECRET` in `.env`.
 
 ## API Endpoints
 
 ### Health Check
-```bash
+
+```http
 GET /health
 ```
 
 ### Category Classification
-```bash
-POST /api/v1/classify/category
-Content-Type: application/json
-X-API-Key: your-api-key
 
+```http
+POST /api/v1/classify/category
+```
+
+Example request:
+
+```json
 {
-  "name": "Wireless Headphones",
-  "description": "Premium wireless headphones with active noise cancellation...",
-  "price": 149.99,
-  "inventory": 250,
-  "created_date": "2024-01-01"
+  "name": "Sony WH-1000XM5 Wireless Headphones",
+  "description": "Premium wireless headphones with active noise cancellation, long battery life, comfortable design, and high-quality sound for travel, study, and office work.",
+  "price": 349.99,
+  "inventory": 120
 }
 ```
 
-**Response:**
+Example response:
+
 ```json
 {
   "status": "success",
   "data": {
-    "primary_category": "mid-range",
-    "confidence": 0.85,
-    "tags": ["detailed-description", "high-stock"],
-    "applied_rules": ["price_tier_rule", "inventory_level_rule"],
+    "primary_category": "premium",
+    "confidence": 0.8,
+    "tags": [],
+    "applied_rules": ["price_tier_rule"],
     "llm_enhancement": {
-      "subcategory": "electronics",
+      "subcategory": "wireless headphones",
       "quality_assessment": "excellent",
-      "recommended_marketing_angle": "premium sound quality",
-      "potential_customer_segment": "audiophiles, professionals"
+      "recommended_marketing_angle": "Premium noise cancellation and comfort for travel and work",
+      "potential_customer_segment": "professionals, commuters, students, and frequent travelers"
     },
-    "processing_time_ms": 1250.5
+    "processing_time_ms": 2500.4,
+    "error": null
   },
-  "trace_id": "550e8400-e29b-41d4-a716-446655440000",
-  "timestamp": "2024-01-15T10:30:00Z"
+  "trace_id": "example-trace-id",
+  "timestamp": "2026-07-01T11:08:15.812460"
+}
+```
+
+If the LLM provider is unavailable, the API still returns the rule-based result:
+
+```json
+{
+  "status": "success",
+  "data": {
+    "primary_category": "premium",
+    "confidence": 0.8,
+    "tags": [],
+    "applied_rules": ["price_tier_rule"],
+    "llm_enhancement": null,
+    "processing_time_ms": 12470.6,
+    "error": "OpenAI rate limit/quota error: insufficient_quota"
+  }
 }
 ```
 
 ### Recommendation Scoring
-```bash
-POST /api/v1/classify/recommendation
-Content-Type: application/json
-X-API-Key: your-api-key
 
+```http
+POST /api/v1/classify/recommendation
+```
+
+Example request:
+
+```json
 {
   "name": "Wireless Headphones",
-  "description": "Premium wireless headphones...",
+  "description": "Premium wireless headphones with active noise cancellation and long battery life.",
   "price": 149.99,
   "inventory": 250
 }
 ```
 
-**Response:**
-```json
-{
-  "status": "success",
-  "data": {
-    "base_score": 75,
-    "final_recommendation_score": 80,
-    "score_breakdown": {
-      "base_score": 50,
-      "price_tier_bonus": 15,
-      "inventory_bonus": 10,
-      "description_bonus": 20
-    },
-    "is_recommended": true,
-    "recommendation_reason": "Excellent product with strong market demand",
-    "target_audience": "Tech professionals and audiophiles",
-    "key_selling_points": ["Noise cancellation", "Long battery life", "Premium build"],
-    "applied_rules": ["price_rule", "inventory_rule", "description_rule"],
-    "score_adjustment_from_llm": 5,
-    "llm_enhancement": true,
-    "processing_time_ms": 1500.25
-  },
-  "trace_id": "550e8400-e29b-41d4-a716-446655440000",
-  "timestamp": "2024-01-15T10:30:00Z"
-}
-```
-
-## Configuration
-
-### Environment Variables
-
-```env
-# Application
-ENVIRONMENT=development              # development, staging, production
-DEBUG=true                            # Enable debug mode
-LOG_LEVEL=INFO                       # DEBUG, INFO, WARNING, ERROR, CRITICAL
-LOG_FORMAT=json                      # json or text
-
-# Database
-DATABASE_URL=postgresql://user:password@localhost:5432/labeling_db
-
-# OpenAI / LLM
-OPENAI_API_KEY=sk-your-key-here
-OPENAI_MODEL=gpt-4                   # LLM model to use
-OPENAI_TEMPERATURE=0.7               # LLM temperature (0-1)
-OPENAI_MAX_TOKENS=500                # Max tokens per LLM response
-
-# API Security
-API_KEY_SECRET=your-api-key          # API key for authentication
-RATE_LIMIT_PER_MINUTE=100            # Rate limiting per API key
-```
-
 ## Business Rules
 
-### Category Classification Rules
+### Category Classification
 
-1. **Price Tier Rule**
-   - Price < $50 → "budget"
-   - $50 ≤ Price ≤ $200 → "mid-range"
-   - Price > $200 → "premium"
+Price tier:
 
-2. **Inventory Level Rule**
-   - Inventory > 1000 → add "high-stock" tag
-   - Inventory < 10 → add "low-stock" and "trigger-reorder" tags
+```text
+price < 50          -> budget
+50 <= price <= 200  -> mid-range
+price > 200         -> premium
+```
 
-3. **Description Quality Rule**
-   - Description length > 500 chars → add "detailed-description" tag
+Inventory:
 
-### Recommendation Scoring Rules
+```text
+inventory > 1000 -> high-stock
+inventory < 10   -> low-stock, trigger-reorder
+```
 
-**Base Score: 50**
+Description:
 
-- Price Tier Bonus: +15 if mid-range or premium
-- Inventory Bonus: +10 if high-stock; -20 if low-stock
-- Description Bonus: +20 if detailed (> 500 chars)
-- New Product Bonus: +15 if created < 30 days
-- Final Score: Capped 0-100
-- Recommendation Threshold: score ≥ 60
+```text
+description length > 500 characters -> detailed-description
+```
+
+### Recommendation Scoring
+
+Base score:
+
+```text
+50
+```
+
+Adjustments:
+
+```text
+mid-range or premium price -> +15
+high inventory             -> +10
+low inventory              -> -20
+detailed description        -> +20
+new product                 -> +15
+```
+
+A product is recommended when:
+
+```text
+final_recommendation_score >= 60
+```
 
 ## Testing
 
-### Run Unit Tests
+Run unit tests:
+
 ```bash
 pytest tests/unit -v
 ```
 
-### Run Integration Tests
+Run integration tests:
+
 ```bash
 pytest tests/integration -v
 ```
 
-### Run All Tests
+Run all tests:
+
 ```bash
-pytest -v --cov=src
+pytest -v
 ```
 
-## Performance Considerations
+## LLM Integration
 
-- **LLM Call Optimization**: Business rules evaluated first (< 1ms), LLM calls (~1-2 seconds) only if rules don't provide confidence
-- **Caching**: Consider Redis caching for identical products (future enhancement)
-- **Rate Limiting**: API key-based rate limiting at 100 requests/minute (configurable)
-- **Database**: Connection pooling optimized for production
+The project uses the OpenAI Python SDK.
 
-## Production Deployment
+The LLM step is optional. Business rules are evaluated first, then the app attempts LLM enrichment. If the LLM provider fails, the API falls back to rule-based output.
 
-### Docker Image Build
-```bash
-docker build -f docker/Dockerfile -t llm-api:latest .
+Common LLM failure causes:
+
+```text
+invalid API key
+missing API quota
+billing not enabled
+model not available
+provider timeout
+local LLM server not running
 ```
 
-### Environment Considerations
-- Set `ENVIRONMENT=production`
-- Set `DEBUG=false`
-- Use strong `API_KEY_SECRET`
-- Use external PostgreSQL instance (not containerized)
-- Configure proper logging aggregation (ELK, CloudWatch, etc.)
-- Enable HTTPS/TLS
-- Setup monitoring and alerting
+## Security Notes
 
-### Cloud Deployment (AWS Example)
-- Use ECS/Fargate for container orchestration
-- Use RDS for PostgreSQL
-- Use API Gateway for routing and rate limiting
-- Use CloudWatch for logging and monitoring
+Do not commit:
+
+```text
+.env
+venv/
+__pycache__/
+API keys
+database passwords
+personal tokens
+```
+
+Commit only safe templates such as:
+
+```text
+.env.example
+```
 
 ## Troubleshooting
 
-### Database Connection Error
+### `llm_enhancement` is null
+
+The LLM provider failed or is unavailable. Check the `error` field in the API response and the Uvicorn logs.
+
+### OpenAI insufficient quota
+
+The OpenAI API requires available API quota or billing. A ChatGPT subscription does not automatically provide API credits.
+
+The API still works without LLM enrichment because rule-based classification does not require OpenAI.
+
+### API key required
+
+Add the API key header:
+
+```text
+X-API-Key: my-local-api-key
 ```
-Error: could not translate host name "postgres" to address
+
+### Invalid API key
+
+The value in the request header does not match `API_KEY_SECRET` in `.env`.
+
+### Database connection failed
+
+Check that PostgreSQL is running:
+
+```bash
+docker ps
 ```
-**Solution**: Ensure PostgreSQL is running and DATABASE_URL is correct
 
-### OpenAI API Key Error
+Check that `.env` uses the correct database URL:
+
+```env
+DATABASE_URL=postgresql://labeling_user:labeling_password@127.0.0.1:5433/labeling_db
 ```
-Error: OPENAI_API_KEY not provided
+
+### Port already in use
+
+Stop the existing Python process or use a different port.
+
+Windows:
+
+```powershell
+Get-Process python -ErrorAction SilentlyContinue | Stop-Process -Force
 ```
-**Solution**: Add OPENAI_API_KEY to .env file
 
-### Port Already in Use
-```
-Error: Address already in use
-```
-**Solution**: Change port or kill process on port 8000
+## Future Improvements
 
-## Contributing
+- Add configurable local LLM support with Ollama
+- Add Hugging Face provider support
+- Add Azure OpenAI configuration
+- Add Redis caching
+- Add Alembic database migrations
+- Add GitHub Actions CI
+- Add deployment guide
+- Improve test coverage for LLM failure modes
 
-1. Create feature branch: `git checkout -b feature/my-feature`
-2. Make changes and test: `pytest`
-3. Commit: `git commit -m "Add feature"`
-4. Push: `git push origin feature/my-feature`
-5. Create Pull Request
-
-## License
-
-MIT License
-
-## Support
-
-For issues or questions, please create an issue in the repository or contact the development team.
