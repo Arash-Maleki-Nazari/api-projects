@@ -71,3 +71,5 @@ docker-compose.override.yml
 # Project specific
 .env.local
 local_data/
+
+data/chroma_db/
